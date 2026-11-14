@@ -154,6 +154,16 @@ the UI shows a permanent "not production-secure" banner.
 
 ## Supabase Setup
 
+> **Status (2026-11-14):** a dedicated project **“BusinessVault”**
+> (ref `axpgezlbosvnyuutdwom`, region `ap-south-1`, free tier) is provisioned
+> and verified: both migrations applied (versions `20261114123726`,
+> `20261114123743`), all 3 tables + 15 RLS policies + the private
+> `business-documents` bucket confirmed via SQL, and email auto-confirm is
+> enabled for frictionless POC sign-up. Its credentials are in the local
+> (git-ignored) `.env.local`. The app's runtime calls to `*.supabase.co` are
+> blocked **from this sandbox's network** — set `AUTH_MODE=supabase` in any
+> normal environment (local machine or Vercel) and the live path works.
+
 1. Create a project at [supabase.com](https://supabase.com); copy the project
    URL and anon key into `.env.local`.
 2. **Auth:** for a frictionless POC demo, disable "Confirm email" under
@@ -214,7 +224,8 @@ npm run test:watch # watch mode
 | Smoke — ZIP export + contents + duplicates + manifest | ✅ verified | `BusinessVault_November_2026.zip` |
 | Smoke — missing storage object during export | ✅ aborts with 502 + named files | never a partial archive |
 | Smoke — unauthorized access (2nd user) | ✅ 404/401, existence not leaked | preview, download, delete, list |
-| Supabase live integration (auth, RLS, storage) | ⛔ blocked | no Supabase credentials in this environment — integration code complete, apply migrations to verify |
+| Supabase provisioning (project, migrations, RLS, bucket, auth config) | ✅ verified live | project `axpgezlbosvnyuutdwom`; schema/policies/bucket/keys checked via SQL through the Supabase connector |
+| Supabase runtime E2E from this sandbox | ⛔ blocked (network policy) | sandbox egress drops `*.supabase.co`; run with `AUTH_MODE=supabase` on a normal network (or Vercel) to verify end-to-end |
 | Playwright E2E | ⛔ not executed | sandbox cannot download browser binaries |
 
 ## Sample Documents

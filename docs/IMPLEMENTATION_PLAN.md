@@ -30,9 +30,13 @@
    preview, export, delete, states, responsive).
 5. **Migrations** ✅ — `supabase/migrations/*.sql` with RLS + storage policies.
 
-## Stage 4 — Database ✅ (code complete; applying requires a Supabase project)
-- Schema + RLS migrations written; Supabase configuration documented in the
-  README. Live migration execution is **blocked** without credentials.
+## Stage 4 — Database ✅ (provisioned and verified live on 2026-11-14)
+- Schema + RLS migrations applied to the live Supabase project
+  "BusinessVault" (`axpgezlbosvnyuutdwom`, ap-south-1) and verified via SQL:
+  3 tables, 8 indexes, 15 RLS policies, private `business-documents` bucket.
+  Auth email auto-confirm enabled for POC sign-up. Application runtime calls
+  to Supabase are network-blocked from this sandbox (verified); the app runs
+  the live path in any normal environment with `AUTH_MODE=supabase`.
 
 ## Stage 5 — Testing ✅ (Supabase live + Playwright blocked — see README)
 - Unit tests (Vitest): 52 tests / 6 files, all passing — every pure module +
