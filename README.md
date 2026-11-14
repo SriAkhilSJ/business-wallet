@@ -226,6 +226,8 @@ npm run test:watch # watch mode
 | Smoke — unauthorized access (2nd user) | ✅ 404/401, existence not leaked | preview, download, delete, list |
 | Supabase provisioning (project, migrations, RLS, bucket, auth config) | ✅ verified live | project `axpgezlbosvnyuutdwom`; schema/policies/bucket/keys checked via SQL through the Supabase connector |
 | Supabase runtime E2E from this sandbox | ⛔ blocked (network policy) | sandbox egress drops `*.supabase.co`; run with `AUTH_MODE=supabase` on a normal network (or Vercel) to verify end-to-end |
+| Live RLS security tests (Supabase SQL, two simulated JWT users + anon) | ✅ verified live | own writes work; cross-user read/update/delete = 0 rows; foreign insert rejected (`42501` row-level security); anon sees nothing; test rows cleaned up |
+| Vercel deployment | 🔄 in progress | project `business-vault` created (env vars, clone-at-install strategy); connector auth dropped mid-test — reconnect to finish |
 | Playwright E2E | ⛔ not executed | sandbox cannot download browser binaries |
 
 ## Sample Documents
