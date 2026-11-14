@@ -13,6 +13,10 @@ Core workflow this POC demonstrates:
 UPLOAD → ORGANIZE → FILTER BY MONTH → DOWNLOAD ZIP → SHARE WITH CA (manual)
 ```
 
+> **Live POC deployment:** <https://business-vault-sri-akhil-sj-s-projects.vercel.app>
+> (Vercel production, Supabase backend — sign up, upload a few of the sample PDFs
+> from [`sample-data/`](sample-data/), filter to a month, and export the ZIP)
+
 ## Problem Statement (hypothesis)
 
 Business owners' financial documents are scattered across mobile galleries,
@@ -227,7 +231,9 @@ npm run test:watch # watch mode
 | Supabase provisioning (project, migrations, RLS, bucket, auth config) | ✅ verified live | project `axpgezlbosvnyuutdwom`; schema/policies/bucket/keys checked via SQL through the Supabase connector |
 | Supabase runtime E2E from this sandbox | ⛔ blocked (network policy) | sandbox egress drops `*.supabase.co`; run with `AUTH_MODE=supabase` on a normal network (or Vercel) to verify end-to-end |
 | Live RLS security tests (Supabase SQL, two simulated JWT users + anon) | ✅ verified live | own writes work; cross-user read/update/delete = 0 rows; foreign insert rejected (`42501` row-level security); anon sees nothing; test rows cleaned up |
-| Vercel deployment | 🔄 in progress | project `business-vault` created (env vars, clone-at-install strategy); connector auth dropped mid-test — reconnect to finish |
+| Vercel deployment | ✅ deployed live | project `business-vault`; build cloned from GitHub at install time (no GitHub App needed); Next.js 16.4.6, all 15 routes, production target |
+| Live deployed endpoints | ✅ verified live | `https://business-vault-sri-akhil-sj-s-projects.vercel.app` — `/` landing renders, `/sign-in` renders, `/api/health` returns `{"status":"ok","mode":"supabase"}`, `/api/documents` → 401 `unauthorized` without a session, `/dashboard` redirects to sign-in |
+| Authenticated flows on the live deployment (upload → filter → ZIP) | ⛔ not scripted | sandbox fetch tool is GET-only (no POST/cookies); same code path as the passing local smoke suite, and its data layer (RLS) is verified live — click through the live URL to exercise it |
 | Playwright E2E | ⛔ not executed | sandbox cannot download browser binaries |
 
 ## Sample Documents
