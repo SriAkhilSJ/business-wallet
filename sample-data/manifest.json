@@ -1,0 +1,62 @@
+[
+  {
+    "file": "sample-01-office-rent-invoice.pdf",
+    "title": "RENT INVOICE",
+    "category": "Expense",
+    "documentDate": "2026-10-05"
+  },
+  {
+    "file": "sample-02-electricity-bill.pdf",
+    "title": "ELECTRICITY BILL",
+    "category": "Utility Bill",
+    "documentDate": "2026-10-18"
+  },
+  {
+    "file": "sample-03-internet-bill.pdf",
+    "title": "INTERNET BILL",
+    "category": "Utility Bill",
+    "documentDate": "2026-11-03"
+  },
+  {
+    "file": "sample-04-laptop-purchase-invoice.pdf",
+    "title": "PURCHASE INVOICE",
+    "category": "Purchase Invoice",
+    "documentDate": "2026-10-22"
+  },
+  {
+    "file": "sample-05-office-supplies-receipt.pdf",
+    "title": "SUPPLIES RECEIPT",
+    "category": "Receipt",
+    "documentDate": "2026-11-07"
+  },
+  {
+    "file": "sample-06-client-sales-invoice.pdf",
+    "title": "SALES INVOICE",
+    "category": "Sales Invoice",
+    "documentDate": "2026-11-10"
+  },
+  {
+    "file": "sample-07-fuel-receipt.pdf",
+    "title": "FUEL RECEIPT",
+    "category": "Receipt",
+    "documentDate": "2026-11-12"
+  },
+  {
+    "file": "sample-08-software-subscription-invoice.pdf",
+    "title": "SUBSCRIPTION INVOICE",
+    "category": "Expense",
+    "documentDate": "2026-10-30"
+  },
+  {
+    "file": "sample-09-equipment-purchase-bill.pdf",
+    "title": "EQUIPMENT BILL",
+    "category": "Purchase Invoice",
+    "documentDate": "2026-11-13"
+  },
+  {
+    "file": "sample-10-payment-receipt.pdf",
+    "title": "PAYMENT RECEIPT",
+    "category": "Payment Proof",
+    "documentDate": "2026-10-15"
+  }
+]
