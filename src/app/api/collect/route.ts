@@ -9,6 +9,9 @@ import { planCollection } from "@/lib/collect/intent";
 import { buildCollectionJob, type JobSourceDoc } from "@/lib/collect/job";
 import { parseNote, periodFromNote, type WantedItem } from "@/lib/collect/request";
 import { todayUtcDate } from "@/lib/dates";
+import { getMode } from "@/lib/env";
+import { createSupabaseServerClient } from "@/lib/auth/supabase-server";
+import { createJob, createJobDb, updateJob, updateJobDb } from "@/lib/jobs";
 import { jsonError } from "@/lib/errors";
 import { getStore } from "@/lib/store";
 
@@ -49,6 +52,15 @@ export async function POST(req: Request) {
       store.listDocuments(user.id),
       store.getBusinessForUser(user.id),
     ]);
+
+    const jobId = crypto.randomUUID();
+    const mode = getMode();
+    if (mode === "supabase") {
+      const supabase = await createSupabaseServerClient();
+      await createJobDb(supabase, jobId, business?.id ?? "", user.id, { from: body.from, to: body.to, note: body.note }, documents.length);
+    } else {
+      createJob(jobId, business?.id ?? "", user.id, { from: body.from, to: body.to, note: body.note }, documents.length);
+    }
 
     const source: JobSourceDoc[] = documents.map((doc) => ({
       id: doc.id,
@@ -102,8 +114,23 @@ export async function POST(req: Request) {
       source,
       { wanted, selection },
     );
+
+    // Mark the job complete.
+    if (mode === "supabase") {
+      const supabase = await createSupabaseServerClient();
+      await updateJobDb(supabase, jobId, {
+        status: "completed",
+        progress: { discovered: source.length, processed: job.counts.included, failed: 0, total: source.length },
+      });
+    } else {
+      updateJob(jobId, {
+        status: "completed",
+        progress: { discovered: source.length, processed: job.counts.included, failed: 0, total: source.length },
+      });
+    }
     if (!body.download) {
       return Response.json({
+        jobId,
         job,
         businessName: business?.businessName ?? "My Business",
         periodFromNote: period?.label ?? null,

@@ -109,7 +109,8 @@ export async function POST(req: Request) {
     };
     const store = new SupabaseDocumentStore(supabase);
     const business = await store.provisionUser(user, { businessName });
-    recordAudit({
+    const { recordAuditDb } = await import("@/lib/audit");
+    await recordAuditDb(supabase, {
       businessId: business.id,
       userId: user.id,
       action: "sign_up",
