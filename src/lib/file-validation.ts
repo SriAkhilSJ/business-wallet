@@ -13,21 +13,44 @@ import {
 import { isValidCalendarDate } from "./dates";
 import { extensionOf } from "./filenames";
 
-export type DetectedType = "pdf" | "jpeg" | "png";
+export type DetectedType = "pdf" | "jpeg" | "png" | "text";
 
 export const DETECTED_MIME: Record<DetectedType, string> = {
   pdf: "application/pdf",
   jpeg: "image/jpeg",
   png: "image/png",
+  text: "text/plain",
 };
 
 const EXTENSIONS_BY_TYPE: Record<DetectedType, readonly string[]> = {
   pdf: ["pdf"],
   jpeg: ["jpg", "jpeg"],
   png: ["png"],
+  text: ["txt"],
 };
 
-const ALLOWED_EXT_SET = new Set(["pdf", "jpg", "jpeg", "png"]);
+const ALLOWED_EXT_SET = new Set(["pdf", "jpg", "jpeg", "png", "txt"]);
+
+/**
+ * Text has no magic bytes, so the check is the opposite: no NULs, no control
+ * characters other than tab/newline, and a mostly printable sample.
+ */
+export function looksLikeText(bytes: Uint8Array): boolean {
+  if (bytes.length === 0) return false;
+  const sample = bytes.subarray(0, Math.min(bytes.length, 4096));
+  let printable = 0;
+  for (const byte of sample) {
+    if (byte === 0) return false;
+    if (byte === 9 || byte === 10 || byte === 13) {
+      printable += 1;
+    } else if (byte < 32 || byte === 127) {
+      return false;
+    } else {
+      printable += 1;
+    }
+  }
+  return printable / sample.length > 0.95;
+}
 
 /** Identify file type from magic bytes. Never trusts the extension or MIME. */
 export function detectFileType(bytes: Uint8Array): DetectedType | null {
@@ -94,7 +117,7 @@ export function validateUploadFile(input: FileCheckInput): FileCheckResult {
   if (!ext || !ALLOWED_EXT_SET.has(ext)) {
     return {
       ok: false,
-      error: `"${rawName}" is not a supported file type. Allowed: PDF, JPG, JPEG, PNG.`,
+      error: `"${rawName}" is not a supported file type. Allowed: PDF, JPG, JPEG, PNG, TXT.`,
     };
   }
   if (input.size <= 0 || input.bytes.length === 0) {
@@ -105,6 +128,12 @@ export function validateUploadFile(input: FileCheckInput): FileCheckResult {
       ok: false,
       error: `"${rawName}" exceeds the ${MAX_FILE_SIZE_MB} MB size limit.`,
     };
+  }
+  if (ext === "txt") {
+    if (!looksLikeText(input.bytes)) {
+      return { ok: false, error: `"${rawName}" is not a plain text file.` };
+    }
+    return { ok: true, mimeType: DETECTED_MIME.text, detected: "text" };
   }
   const detected = detectFileType(input.bytes);
   if (!detected) {
@@ -149,6 +178,7 @@ export const authCredentialsSchema = z.object({
 export const signUpSchema = authCredentialsSchema.extend({
   fullName: z.string().trim().min(1, "Full name is required.").max(120),
   businessName: z.string().trim().min(1, "Business name is required.").max(160),
+  aiConsent: z.boolean().optional(),
 });
 
 export const exportRequestSchema = z.object({

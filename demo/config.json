@@ -1,0 +1,9 @@
+{
+  "businessName": "Sharma Traders",
+  "range": { "from": "2026-08-01", "to": "2026-08-31" },
+  "sources": ["photos", "files", "sms", "notifications", "whatsapp", "email", "drive"],
+  "thresholds": {
+    "autoAccept": 0.85,
+    "review": 0.3
+  }
+}

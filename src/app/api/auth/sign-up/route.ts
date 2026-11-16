@@ -16,9 +16,28 @@ import { getStore } from "@/lib/store";
 import { SupabaseDocumentStore } from "@/lib/store/supabase-store";
 import type { SessionUser } from "@/lib/types";
 
+import { recordAudit } from "@/lib/audit";
+import { checkRateLimit } from "@/lib/rate-limit";
+
 export async function POST(req: Request) {
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    "unknown";
+  const rl = checkRateLimit(`signup:${ip}`, 5, 60_000);
+  if (!rl.allowed) {
+    return Response.json(
+      {
+        error: {
+          code: "rate_limited",
+          message: `Too many attempts. Try again in ${Math.ceil(rl.retryAfterMs / 1000)}s.`,
+        },
+      },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } },
+    );
+  }
   try {
-    const { email, password, fullName, businessName } = parseOrThrow(
+    const { email, password, fullName, businessName, aiConsent } = parseOrThrow(
       signUpSchema,
       await readJsonBody(req),
       "Invalid sign-up details.",
@@ -34,6 +53,14 @@ export async function POST(req: Request) {
       };
       const store = await getStore();
       const business = await store.provisionUser(user, { businessName });
+      recordAudit({
+        businessId: business.id,
+        userId: user.id,
+        action: "sign_up",
+        targetType: "user",
+        targetId: user.id,
+        metadata: { aiConsent: aiConsent === true, mode: "dev-fallback" },
+      });
       const cookieStore = await cookies();
       cookieStore.set(
         DEV_COOKIE_NAME,
@@ -82,6 +109,14 @@ export async function POST(req: Request) {
     };
     const store = new SupabaseDocumentStore(supabase);
     const business = await store.provisionUser(user, { businessName });
+    recordAudit({
+      businessId: business.id,
+      userId: user.id,
+      action: "sign_up",
+      targetType: "user",
+      targetId: user.id,
+      metadata: { aiConsent: aiConsent === true, mode: "supabase" },
+    });
     return Response.json(
       { user, business, mode, devFallback: false },
       { status: 201 },

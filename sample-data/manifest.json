@@ -58,5 +58,23 @@
     "title": "PAYMENT RECEIPT",
     "category": "Payment Proof",
     "documentDate": "2026-10-15"
+  },
+  {
+    "file": "sample-11-upi-payment.txt",
+    "title": "UPI DEBIT ALERT",
+    "category": "Payment Proof",
+    "documentDate": "2026-08-04"
+  },
+  {
+    "file": "sample-12-electricity-sms.txt",
+    "title": "ELECTRICITY BILL SMS",
+    "category": "Utility Bill",
+    "documentDate": "2026-08-18"
+  },
+  {
+    "file": "sample-13-gpay-notification.txt",
+    "title": "GPay PAYMENT NOTIFICATION",
+    "category": "Payment Proof",
+    "documentDate": "2026-08-07"
   }
 ]

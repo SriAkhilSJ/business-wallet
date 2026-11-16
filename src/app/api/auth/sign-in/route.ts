@@ -16,7 +16,25 @@ import { getStore } from "@/lib/store";
 import { SupabaseDocumentStore } from "@/lib/store/supabase-store";
 import type { SessionUser } from "@/lib/types";
 
+import { checkRateLimit } from "@/lib/rate-limit";
+
 export async function POST(req: Request) {
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    "unknown";
+  const rl = checkRateLimit(`signin:${ip}`, 10, 60_000);
+  if (!rl.allowed) {
+    return Response.json(
+      {
+        error: {
+          code: "rate_limited",
+          message: `Too many attempts. Try again in ${Math.ceil(rl.retryAfterMs / 1000)}s.`,
+        },
+      },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } },
+    );
+  }
   try {
     const { email, password } = parseOrThrow(
       authCredentialsSchema,

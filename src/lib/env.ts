@@ -10,13 +10,30 @@ export type AppMode = "supabase" | "dev-fallback";
 
 export function getMode(): AppMode {
   const explicit = process.env.AUTH_MODE;
+  const configured = Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  );
+  const production = process.env.NODE_ENV === "production";
+  const override = process.env.ALLOW_INSECURE_DEV_AUTH === "1";
+
   if (explicit === "supabase" || explicit === "dev-fallback") {
+    if (explicit === "dev-fallback" && production && !override) {
+      throw new Error(
+        "Refusing dev-fallback auth in production. Set ALLOW_INSECURE_DEV_AUTH=1 only for a deliberate local production build.",
+      );
+    }
     return explicit;
   }
-  return process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    ? "supabase"
-    : "dev-fallback";
+
+  if (configured) return "supabase";
+
+  if (production && !override) {
+    throw new Error(
+      "Supabase is not configured in a production build, and the insecure fallback is disabled.",
+    );
+  }
+
+  return "dev-fallback";
 }
 
 export interface SupabaseConfig {

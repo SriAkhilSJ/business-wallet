@@ -49,14 +49,18 @@ export function isValidCalendarDate(value: string): boolean {
 }
 
 /**
- * The date used for month grouping and display:
- * the explicit document date, else the UTC calendar date of the upload.
+ * The date used for month grouping and display: the explicit document date,
+ * or "" when nothing has read one.
+ *
+ * There is deliberately no fallback to the upload date. Saying a bill belongs
+ * to the month it was uploaded is a guess, and it made every unread document
+ * look dated on the day someone happened to upload it.
  */
 export function effectiveDateOf(doc: {
   documentDate: string | null;
   createdAt: string;
 }): string {
-  return doc.documentDate ?? utcDateOfTimestamp(doc.createdAt);
+  return doc.documentDate ?? "";
 }
 
 /** UTC calendar date (`YYYY-MM-DD`) of an ISO timestamp. */
@@ -95,6 +99,25 @@ export function formatDateDisplay(value: string): string {
 /** Today's calendar date in UTC (`YYYY-MM-DD`). */
 export function todayUtcDate(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+/** Indian financial year (April-March) label for a date, e.g. "2026-27". */
+export function financialYear(dateYmd: string): string | null {
+  const d = dateYmd.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return null;
+  const [y, m] = d.split("-").map(Number);
+  const startYear = m >= 4 ? y : y - 1;
+  return `${startYear}-${String(startYear + 1).slice(2)}`;
+}
+
+export function financialYearRange(label: string): { from: string; to: string } | null {
+  const match = /^(\d{4})-(\d{2})$/.exec(label);
+  if (!match) return null;
+  const startYear = Number(match[1]);
+  return {
+    from: `${startYear}-04-01`,
+    to: `${startYear + 1}-03-31`,
+  };
 }
 
 export function formatBytes(bytes: number): string {

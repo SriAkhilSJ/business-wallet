@@ -1,0 +1,45 @@
+[
+  {
+    "file": "bescom-electricity.png",
+    "docType": "Utility Bill",
+    "vendor": "BESCOM",
+    "date": "2026-08-18",
+    "amount": 4860
+  },
+  {
+    "file": "sharma-properties-rent.png",
+    "docType": "Expense",
+    "vendor": "Sharma Properties",
+    "date": "2026-08-01",
+    "amount": 35000
+  },
+  {
+    "file": "cloudtools-invoice.png",
+    "docType": "Purchase Invoice",
+    "vendor": "Cloudtools Pvt Ltd",
+    "date": "2026-08-03",
+    "amount": 2499,
+    "gstin": "29AABCU9603R1ZM"
+  },
+  {
+    "file": "electricals-upi.png",
+    "docType": "Payment Proof",
+    "vendor": "Sharma Electricals",
+    "date": "2026-08-07",
+    "amount": 1200
+  },
+  {
+    "file": "mehta-sales-invoice.png",
+    "docType": "Sales Invoice",
+    "vendor": "Sharma Traders",
+    "date": "2026-08-22",
+    "amount": 18500
+  },
+  {
+    "file": "indianoil-fuel.png",
+    "docType": "Expense",
+    "vendor": "Indian Oil",
+    "date": "2026-08-14",
+    "amount": 2200
+  }
+]

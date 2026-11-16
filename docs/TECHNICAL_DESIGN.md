@@ -78,7 +78,7 @@ visibility controls are never the security boundary.
 ## 4. Document Lifecycle
 
 1. **Upload** — multipart request, ≤ 20 files, ≤ 10 MB per file, extensions
-   `pdf|jpg|jpeg|png`, matching MIME types, magic bytes sniffed
+   `pdf|jpg|jpeg|png|txt`, matching MIME types, magic bytes sniffed
    (`%PDF-`, JPEG `FF D8 FF`, PNG `89 50 4E 47`). Metadata validated with Zod.
    Storage path: `<businessId>/<YYYY>/<MM>/<uuid>.<ext>` inside the private
    bucket (or mirrored directory layout in dev-fallback).
@@ -105,10 +105,14 @@ visibility controls are never the security boundary.
 
 - `document_date` is stored as a PostgreSQL `date` (a calendar date, no time,
   no timezone) and serialized as `YYYY-MM-DD`.
-- Month grouping and filtering use the `YYYY-MM` string prefix of the
-  effective date — no `Date` object arithmetic, so no timezone drift.
-- The documented fallback date is the **UTC calendar date** of `created_at`.
-- Display format is explicit, e.g. `14 Nov 2026`.
+- The effective date of a document is its `document_date` when present. Documents without
+  a read date are **not** attributed to the upload month; they stay visible in the
+  dashboard, are excluded from month-scoped ZIP exports, and are listed separately in
+  the coverage report. Month grouping uses the `YYYY-MM` string prefix of the effective
+  date — no `Date` object arithmetic, so no timezone drift.
+- The UTC upload date is **not** used as a fallback for month grouping (a bill is not
+  dated to the day someone happened to upload it). `todayUtcDate()` is still used for
+  "current month" counts and defaults.
 
 ## 6. Frontend Structure
 

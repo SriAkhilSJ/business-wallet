@@ -35,9 +35,13 @@ export function filterDocuments(
       if (filter.category && doc.category !== filter.category) return false;
 
       if (filter.month || filter.year) {
+        // A document nobody has dated cannot be said to belong to another
+        // month, but hiding it would lose it. It stays visible and is labelled.
         const key = monthKey(effectiveDateOf(doc));
-        if (filter.year && key.slice(0, 4) !== String(filter.year)) return false;
-        if (filter.month && key.slice(5, 7) !== pad2(filter.month)) return false;
+        if (key) {
+          if (filter.year && key.slice(0, 4) !== String(filter.year)) return false;
+          if (filter.month && key.slice(5, 7) !== pad2(filter.month)) return false;
+        }
       }
 
       if (search && !doc.originalFilename.toLowerCase().includes(search)) {
@@ -54,7 +58,11 @@ export function documentsForMonth(
   month: number,
   year: number,
 ): DocumentRecord[] {
-  return filterDocuments(docs, { month, year });
+  // An undated document cannot be attributed to a month, so the export leaves
+  // it out rather than sending it in every month's pack.
+  return filterDocuments(docs, { month, year }).filter(
+    (doc) => effectiveDateOf(doc) !== "",
+  );
 }
 
 export interface DocumentSummary {

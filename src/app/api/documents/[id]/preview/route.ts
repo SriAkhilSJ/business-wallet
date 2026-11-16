@@ -23,7 +23,12 @@ export async function GET(_req: Request, context: RouteContext) {
     return Response.json({
       url,
       mimeType: doc.mimeType,
-      kind: doc.mimeType === "application/pdf" ? "pdf" : "image",
+      kind:
+        doc.mimeType === "application/pdf"
+          ? "pdf"
+          : doc.mimeType === "text/plain"
+            ? "text"
+            : "image",
       filename: doc.originalFilename,
     });
   } catch (err) {

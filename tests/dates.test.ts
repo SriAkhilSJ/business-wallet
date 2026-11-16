@@ -8,6 +8,8 @@ import {
   monthKey,
   monthKeyFor,
   monthLabel,
+  financialYear,
+  financialYearRange,
   todayUtcDate,
   utcDateOfTimestamp,
   zipFilename,
@@ -37,13 +39,10 @@ describe("effectiveDateOf", () => {
     ).toBe("2026-11-05");
   });
 
-  it("falls back to the UTC upload date", () => {
+  it("leaves the date empty when the document has none", () => {
     expect(
       effectiveDateOf({ documentDate: null, createdAt: "2026-10-31T18:30:00.000Z" }),
-    ).toBe("2026-10-31");
-    expect(
-      effectiveDateOf({ documentDate: null, createdAt: "2026-11-01T00:15:00.000Z" }),
-    ).toBe("2026-11-01");
+    ).toBe("");
   });
 });
 
@@ -76,5 +75,20 @@ describe("display formatting", () => {
   it("normalizes timestamps to UTC calendar dates", () => {
     expect(utcDateOfTimestamp("2026-11-14T23:30:00.000Z")).toBe("2026-11-14");
     expect(todayUtcDate()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe("financialYear", () => {
+  it("maps April-March to an Indian FY label", () => {
+    expect(financialYear("2026-04-01")).toBe("2026-27");
+    expect(financialYear("2027-03-31")).toBe("2026-27");
+    expect(financialYear("2027-04-01")).toBe("2027-28");
+  });
+  it("returns null for bad input", () => {
+    expect(financialYear("nope")).toBeNull();
+  });
+  it("financialYearRange round-trips", () => {
+    expect(financialYearRange("2026-27")).toEqual({ from: "2026-04-01", to: "2027-03-31" });
+    expect(financialYearRange("bad")).toBeNull();
   });
 });

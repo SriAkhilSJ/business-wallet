@@ -1,0 +1,13 @@
+file 'C:/Users/Administrator/Downloads/business-wallet/business-wallet/demo/e2e/frames/demo-01.png'
+duration 4
+file 'C:/Users/Administrator/Downloads/business-wallet/business-wallet/demo/e2e/frames/demo-02.png'
+duration 4
+file 'C:/Users/Administrator/Downloads/business-wallet/business-wallet/demo/e2e/frames/demo-03.png'
+duration 4
+file 'C:/Users/Administrator/Downloads/business-wallet/business-wallet/demo/e2e/frames/demo-04.png'
+duration 4
+file 'C:/Users/Administrator/Downloads/business-wallet/business-wallet/demo/e2e/frames/demo-05.png'
+duration 4
+file 'C:/Users/Administrator/Downloads/business-wallet/business-wallet/demo/e2e/frames/demo-06.png'
+duration 4
+file 'C:/Users/Administrator/Downloads/business-wallet/business-wallet/demo/e2e/frames/demo-06.png'

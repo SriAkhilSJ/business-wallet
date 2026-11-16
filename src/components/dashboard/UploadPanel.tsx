@@ -22,14 +22,21 @@ interface UploadEntry {
   documentDate: string; // '' means "use upload date"
 }
 
-interface UploadResponse {
-  documents: DocumentRecord[];
+interface UploadOutcome {
+  created: DocumentRecord[];
   errors: { filename: string; error: string }[];
   notice: string | null;
-  error?: { code: string; message: string };
 }
 
-const ACCEPT = ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";
+function guessMime(name: string): string {
+  const ext = name.split(".").pop()?.toLowerCase();
+  if (ext === "pdf") return "application/pdf";
+  if (ext === "png") return "image/png";
+  if (ext === "txt") return "text/plain";
+  return "image/jpeg";
+}
+
+const ACCEPT = ".pdf,.jpg,.jpeg,.png,.txt,application/pdf,image/jpeg,image/png,text/plain";
 
 export function UploadPanel({
   onClose,
@@ -83,39 +90,143 @@ export function UploadPanel({
     setEntries((prev) => prev.filter((_, i) => i !== index));
   }
 
+  /**
+   * Files go straight to storage. The serverless function only hands out a
+   * short-lived URL, so a 9 MB photo never touches it.
+   *
+   * Three uploads run at once: the model call costs about 7s per document, so
+   * twenty photos sequential would be over two minutes.
+   */
+  async function uploadDirect(): Promise<UploadOutcome | null> {
+    const created: DocumentRecord[] = [];
+    const errors: { filename: string; error: string }[] = [];
+    let duplicates = 0;
+    let unsupported = false;
+
+    async function uploadOne(
+      entry: UploadEntry,
+    ): Promise<DocumentRecord | { error: string } | null> {
+      const targetRes = await fetch("/api/documents/signed-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filename: entry.file.name,
+          documentDate: entry.documentDate,
+        }),
+      });
+
+      if (targetRes.status === 501) return null;
+
+      const target = await targetRes.json().catch(() => null);
+      if (!targetRes.ok || !target?.signedUrl) {
+        return { error: target?.error?.message ?? "Could not start the upload." };
+      }
+
+      const put = await fetch(target.signedUrl as string, {
+        method: "PUT",
+        headers: {
+          "Content-Type": entry.file.type || guessMime(entry.file.name),
+          "x-upsert": "false",
+        },
+        body: entry.file,
+      });
+      if (!put.ok) {
+        return { error: "The file did not reach storage. Please try again." };
+      }
+
+      const commit = await fetch("/api/documents/commit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storagePath: target.storagePath,
+          originalFilename: entry.file.name,
+          mimeType: entry.file.type || guessMime(entry.file.name),
+          fileSize: entry.file.size,
+          category: entry.category,
+          documentDate: entry.documentDate,
+        }),
+      });
+      const payload = await commit.json().catch(() => null);
+      if (!commit.ok || !payload?.document) {
+        return { error: payload?.error?.message ?? "Could not save the document." };
+      }
+      if (payload.duplicateOf) duplicates += 1;
+      return payload.document as DocumentRecord;
+    }
+    const queue = [...entries];
+    await Promise.all(
+      Array.from({ length: Math.min(3, queue.length) }, async () => {
+        for (;;) {
+          const entry = queue.shift();
+          if (!entry) return;
+          const result = await uploadOne(entry);
+          if (result === null) {
+            unsupported = true;
+            return;
+          }
+          if ("error" in result) {
+            errors.push({ filename: entry.file.name, error: result.error });
+          } else {
+            created.push(result);
+          }
+        }
+      }),
+    );
+
+    if (unsupported) return null;
+    return {
+      created,
+      errors,
+      notice:
+        duplicates > 0
+          ? `${duplicates} duplicate file(s) kept, and left out of packs.`
+          : null,
+    };
+  }
+
+  async function uploadMultipart(): Promise<UploadOutcome> {
+    const form = new FormData();
+    form.append(
+      "meta",
+      JSON.stringify(
+        entries.map((e) => ({ category: e.category, documentDate: e.documentDate })),
+      ),
+    );
+    for (const entry of entries) {
+      form.append("files", entry.file, entry.file.name);
+    }
+
+    const res = await fetch("/api/documents", { method: "POST", body: form });
+    const data = await res.json().catch(() => null);
+    return {
+      created: (data?.documents ?? []) as DocumentRecord[],
+      errors: (data?.errors ?? []) as { filename: string; error: string }[],
+      notice: (data?.notice ?? null) as string | null,
+    };
+  }
+
   async function submit() {
     if (entries.length === 0) return;
     setBusy(true);
     setErrors([]);
     setTopError(null);
     try {
-      const form = new FormData();
-      const meta = entries.map((e) => ({
-        category: e.category,
-        documentDate: e.documentDate,
-      }));
-      form.append("meta", JSON.stringify(meta));
-      for (const entry of entries) {
-        form.append("files", entry.file, entry.file.name);
-      }
-      const res = await fetch("/api/documents", { method: "POST", body: form });
-      const data = (await res.json()) as UploadResponse;
-      if (!res.ok && (!data.documents || data.documents.length === 0)) {
-        setTopError(data.error?.message ?? "Upload failed. Please try again.");
-        if (data.errors?.length) setErrors(data.errors);
+      const outcome = (await uploadDirect()) ?? (await uploadMultipart());
+
+      if (outcome.created.length === 0 && outcome.errors.length > 0) {
+        setTopError("None of the files were accepted. See the errors below.");
+        setErrors(outcome.errors);
         return;
       }
-      if (data.errors?.length) setErrors(data.errors);
-      onUploaded({
-        created: data.documents ?? [],
-        notice: data.notice,
-      });
-      const failed = data.errors?.length ? data.errors.length : 0;
-      if (failed === 0) {
+
+      if (outcome.errors.length > 0) setErrors(outcome.errors);
+      onUploaded({ created: outcome.created, notice: outcome.notice });
+
+      if (outcome.errors.length === 0) {
         onClose();
       } else {
         // Keep the panel open so the user can fix rejected files.
-        const failedNames = new Set(data.errors.map((e) => e.filename));
+        const failedNames = new Set(outcome.errors.map((e) => e.filename));
         setEntries((prev) => prev.filter((e) => failedNames.has(e.file.name)));
       }
     } catch {
@@ -256,11 +367,6 @@ export function UploadPanel({
                       />
                     </div>
                   </div>
-                  {!entry.documentDate && (
-                    <p className="mt-1.5 text-xs text-amber-700">
-                      No document date set — the upload date will be used.
-                    </p>
-                  )}
                 </li>
               ))}
             </ul>

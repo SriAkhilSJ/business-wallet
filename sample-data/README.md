@@ -1,6 +1,7 @@
 # Sample Documents
 
-10 fictional PDF bills, invoices and receipts for demonstrating BusinessVault.
+10 fictional PDF bills, invoices and receipts, plus 3 exported text messages,
+for demonstrating BusinessVault.
 
 **Every document is watermarked "SAMPLE — NOT A REAL TAX INVOICE" and uses
 fictional businesses, addresses, invoice numbers, amounts and tax identifiers.
@@ -21,6 +22,18 @@ Regenerate with `npm run samples:generate` (writes `manifest.json` too).
 | 8 | sample-08-software-subscription-invoice.pdf | Expense | 2026-10-30 | Software subscription invoice |
 | 9 | sample-09-equipment-purchase-bill.pdf | Purchase Invoice | 2026-11-13 | Equipment purchase bill |
 | 10 | sample-10-payment-receipt.pdf | Payment Proof | 2026-10-15 | Payment receipt |
+| 11 | sample-11-upi-payment.txt | Payment Proof | 2026-08-04 | Bank UPI debit alert (text) |
+| 12 | sample-12-electricity-sms.txt | Utility Bill | 2026-08-18 | Electricity bill SMS (text) |
+| 13 | sample-13-gpay-notification.txt | Payment Proof | 2026-08-07 | GPay payment notification (text) |
+
+The three `.txt` files are what an owner actually has when a payment arrives by
+SMS or a UPI app: no attachment, just text. Upload one with the category left
+as "Other" and the reader should file it as Payment Proof or Utility Bill and
+pull the date and amount out of the sentence.
+
+> `npm run samples:generate` rebuilds the ten PDFs and **rewrites
+> `manifest.json`** with only those entries. Re-add the three text entries if
+> you regenerate.
 
 Dates are deliberately spread across **October and November 2026** so the
 month filter and the monthly ZIP export can be demonstrated.

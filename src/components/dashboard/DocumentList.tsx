@@ -103,6 +103,7 @@ export function DocumentList({
             <th scope="col" className="px-4 py-3">Document</th>
             <th scope="col" className="px-4 py-3">Category</th>
             <th scope="col" className="px-4 py-3">Document date</th>
+            <th scope="col" className="px-4 py-3">Amount</th>
             <th scope="col" className="px-4 py-3">Uploaded</th>
             <th scope="col" className="px-4 py-3">Size</th>
             <th scope="col" className="px-4 py-3 text-right">Actions</th>
@@ -114,18 +115,33 @@ export function DocumentList({
               <td className="max-w-[20rem] px-4 py-3">
                 <div className="flex items-center gap-2.5">
                   <FileIcon mimeType={doc.mimeType} />
-                  <span className="truncate font-medium text-slate-900">
-                    {doc.originalFilename}
-                  </span>
+                  <div className="min-w-0">
+                    <span className="block truncate font-medium text-slate-900">
+                      {doc.originalFilename}
+                    </span>
+                    {doc.vendor && (
+                      <span className="block truncate text-xs text-slate-500">
+                        {doc.vendor}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </td>
               <td className="px-4 py-3">
                 <CategoryBadge category={doc.category} />
               </td>
               <td className="whitespace-nowrap px-4 py-3 text-slate-700">
-                {formatDateDisplay(doc.documentDate ?? doc.createdAt)}
-                {!doc.documentDate && (
-                  <span className="ml-1 text-xs text-slate-400">(upload date)</span>
+                {doc.documentDate ? (
+                  formatDateDisplay(doc.documentDate)
+                ) : (
+                  <span className="text-slate-400">date unknown</span>
+                )}
+              </td>
+              <td className="whitespace-nowrap px-4 py-3 text-slate-700">
+                {doc.amount == null ? (
+                  <span className="text-slate-400">—</span>
+                ) : (
+                  `₹${doc.amount.toLocaleString("en-IN")}`
                 )}
               </td>
               <td className="whitespace-nowrap px-4 py-3 text-slate-500">
@@ -179,12 +195,19 @@ export function DocumentList({
                 <p className="break-all font-medium text-slate-900">
                   {doc.originalFilename}
                 </p>
+                {doc.vendor && (
+                  <p className="truncate text-xs text-slate-500">{doc.vendor}</p>
+                )}
                 <div className="mt-1.5 flex flex-wrap items-center gap-2">
                   <CategoryBadge category={doc.category} />
                   <span className="text-xs text-slate-500">
-                    {formatDateDisplay(doc.documentDate ?? doc.createdAt)}
-                    {!doc.documentDate && " (upload date)"}
+                    {doc.documentDate ? formatDateDisplay(doc.documentDate) : "date unknown"}
                   </span>
+                  {doc.amount != null && (
+                    <span className="text-xs font-medium text-slate-700">
+                      ₹{doc.amount.toLocaleString("en-IN")}
+                    </span>
+                  )}
                   <span className="text-xs text-slate-400">
                     {formatBytes(doc.fileSize)}
                   </span>

@@ -1,20 +1,14 @@
 import { z } from "zod";
 
-import {
-  MAX_FILES_PER_UPLOAD,
-  type Category,
-} from "@/lib/config";
+import { MAX_FILES_PER_UPLOAD } from "@/lib/config";
+import type { Category } from "@/lib/config";
 import { parseOrThrow } from "@/lib/api-helpers";
 import { requireUser } from "@/lib/auth/session";
-import {
-  documentMetadataSchema,
-  listQuerySchema,
-  validateUploadFile,
-} from "@/lib/file-validation";
+import { documentMetadataSchema, listQuerySchema } from "@/lib/file-validation";
 import { filterDocuments, summarizeDocuments } from "@/lib/filters";
 import { badRequest, jsonError } from "@/lib/errors";
 import { getStore } from "@/lib/store";
-import type { NewDocumentInput } from "@/lib/store/types";
+import { ingest } from "@/lib/ingest";
 
 const metadataListSchema = z.array(documentMetadataSchema);
 
@@ -79,44 +73,28 @@ export async function POST(req: Request) {
       "Invalid upload metadata.",
     );
     if (metas.length !== files.length) {
-      throw badRequest(
-        "Upload metadata does not match the number of files.",
-      );
+      throw badRequest("Upload metadata does not match the number of files.");
     }
 
-    const inputs: NewDocumentInput[] = [];
-    const errors: { filename: string; error: string }[] = [];
-    let usedUploadDateFallback = 0;
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      const check = validateUploadFile({
+    const ingestFiles = await Promise.all(
+      files.map(async (file, i) => ({
         filename: file.name,
+        bytes: new Uint8Array(await file.arrayBuffer()),
         size: file.size,
-        bytes,
-      });
-      if (!check.ok) {
-        errors.push({ filename: file.name || `file-${i + 1}`, error: check.error });
-        continue;
-      }
-      if (metas[i].documentDate === null) usedUploadDateFallback += 1;
-      inputs.push({
-        originalFilename: file.name.trim(),
-        bytes,
-        mimeType: check.mimeType,
-        fileSize: bytes.length,
         documentDate: metas[i].documentDate,
         category: metas[i].category as Category,
-      });
-    }
+      })),
+    );
 
-    if (inputs.length === 0) {
+    const store = await getStore();
+    const result = await ingest(store, user.id, ingestFiles);
+
+    if (result.created.length === 0 && result.errors.length > 0) {
       return Response.json(
         {
           documents: [],
-          errors,
-          notice: null,
+          errors: result.errors,
+          notice: result.notice,
           error: {
             code: "upload_rejected",
             message: "None of the files were accepted. See errors for details.",
@@ -126,17 +104,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const store = await getStore();
-    const result = await store.createDocuments(user.id, inputs);
-    const allErrors = [...errors, ...result.errors];
-
-    const notice =
-      usedUploadDateFallback > 0
-        ? `${usedUploadDateFallback} document(s) had no document date — the upload date was used instead.`
-        : null;
-
     return Response.json(
-      { documents: result.created, errors: allErrors, notice },
+      { documents: result.created, errors: result.errors, notice: result.notice },
       { status: 201 },
     );
   } catch (err) {

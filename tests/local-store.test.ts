@@ -123,7 +123,7 @@ describe("LocalDevDocumentStore (dev fallback)", () => {
 
     expect(await store.deleteDocument(ALICE.id, record.id)).toBe(true);
     expect(await store.getDocument(ALICE.id, record.id)).toBeNull();
-    expect(existsSync(filePath)).toBe(false);
+    expect(existsSync(filePath)).toBe(true); // soft delete keeps the original
     // Deleting again is a no-op.
     expect(await store.deleteDocument(ALICE.id, record.id)).toBe(false);
   });
@@ -149,8 +149,7 @@ describe("LocalDevDocumentStore (dev fallback)", () => {
     expect(stored!.bytes).toBeNull();
   });
 
-  it("issues dev preview URLs for the owner", async () => {
-    await store.provisionUser(ALICE);
+  it("issues dev preview URLs for the owner", async () => {    await store.provisionUser(ALICE);
     const { created } = await store.createDocuments(ALICE.id, [
       {
         originalFilename: "p.pdf",
@@ -163,5 +162,63 @@ describe("LocalDevDocumentStore (dev fallback)", () => {
     ]);
     const url = await store.getPreviewUrl(ALICE.id, created[0]);
     expect(url).toBe(`/api/documents/${created[0].id}/download?inline=1`);
+  });
+
+  it("lists unclassified documents for review and clears them after a correction", async () => {
+    await store.provisionUser(ALICE);
+    const { created } = await store.createDocuments(ALICE.id, [
+      {
+        originalFilename: "scan.pdf",
+        bytes: PDF,
+        mimeType: "application/pdf",
+        fileSize: PDF.length,
+        documentDate: null,
+        category: "Other",
+      },
+      {
+        originalFilename: "bill.pdf",
+        bytes: PDF,
+        mimeType: "application/pdf",
+        fileSize: PDF.length,
+        documentDate: "2026-08-02",
+        category: "Utility Bill",
+      },
+    ]);
+
+    const queue = await store.listForReview(ALICE.id);
+    expect(queue.map((doc) => doc.originalFilename)).toEqual(["scan.pdf"]);
+
+    const updated = await store.updateDocument(ALICE.id, created[0].id, {
+      category: "Purchase Invoice",
+      documentDate: "2026-08-03",
+      amount: 2499,
+    });
+    expect(updated?.category).toBe("Purchase Invoice");
+    expect(updated?.amount).toBe(2499);
+    expect(updated?.confidence).toBe(1);
+    expect(updated?.classifiedBy).toBe("human");
+    expect(await store.listForReview(ALICE.id)).toEqual([]);
+  });
+
+  it("does not let another user correct a document", async () => {
+    await store.provisionUser(ALICE);
+    await store.provisionUser(BOB);
+    const { created } = await store.createDocuments(ALICE.id, [
+      {
+        originalFilename: "private.pdf",
+        bytes: PDF,
+        mimeType: "application/pdf",
+        fileSize: PDF.length,
+        documentDate: null,
+        category: "Other",
+      },
+    ]);
+
+    const result = await store.updateDocument(BOB.id, created[0].id, {
+      category: "Receipt",
+      documentDate: null,
+      amount: 10,
+    });
+    expect(result).toBeNull();
   });
 });

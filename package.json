@@ -2,6 +2,9 @@
   "name": "bv-scaffold",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -19,6 +22,7 @@
     "jszip": "^3.10.2",
     "lucide-react": "^1.73.0",
     "next": "16.4.6",
+    "pdfjs-dist": "^6.5.438",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "zod": "^4.6.7"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   useCallback,
   useEffect,
@@ -19,10 +20,13 @@ import {
   FileText,
   FolderOpen,
   Info,
+  ListChecks,
   Loader2,
   LogOut,
   PackageOpen,
+  RotateCcw,
   Search,
+  ScanSearch,
   Upload,
   X,
 } from "lucide-react";
@@ -90,6 +94,8 @@ export function DashboardClient({
   const [bannerError, setBannerError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [samplesBusy, setSamplesBusy] = useState(false);
+  const [unread, setUnread] = useState<number | null>(null);
+  const [rereading, setRereading] = useState(false);
 
   /* ----------------------------- data load ---------------------------- */
 
@@ -126,6 +132,37 @@ export function DashboardClient({
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    fetch("/api/documents/reclassify")
+      .then((res) => res.json())
+      .then((data) => setUnread(typeof data?.remaining === "number" ? data.remaining : 0))
+      .catch(() => setUnread(0));
+  }, []);
+
+  async function handleReread() {
+    setRereading(true);
+    setBannerError(null);
+    try {
+      let remaining = unread ?? 0;
+      for (let round = 0; round < 20 && remaining > 0; round += 1) {
+        const res = await fetch("/api/documents/reclassify", { method: "POST" });
+        const data = await res.json().catch(() => null);
+        if (!res.ok) {
+          setBannerError(data?.error?.message ?? "Could not re-read the documents.");
+          return;
+        }
+        remaining = typeof data?.remaining === "number" ? data.remaining : 0;
+        setUnread(remaining);
+      }
+      await load();
+      setNotice("Re-read finished. Categories, dates and amounts now come from the documents.");
+    } catch {
+      setBannerError("Could not reach the server. Please try again.");
+    } finally {
+      setRereading(false);
+    }
+  }
 
   // Debounced search → applied client-side via shared filter logic.
   useEffect(() => {
@@ -265,6 +302,20 @@ export function DashboardClient({
             <span className="hidden max-w-[14rem] truncate text-sm text-slate-500 md:inline-block">
               {user.fullName ?? user.email}
             </span>
+            <Link
+              href="/review"
+              className="flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              <ListChecks className="h-4 w-4" aria-hidden="true" />
+              Review
+            </Link>
+            <Link
+              href="/collect"
+              className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+            >
+              <ScanSearch className="h-4 w-4" aria-hidden="true" />
+              Collect
+            </Link>
             <button
               type="button"
               onClick={handleSignOut}
@@ -326,6 +377,34 @@ export function DashboardClient({
             Upload documents
           </button>
         </div>
+
+        {unread !== null && unread > 0 && (
+          <section className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-amber-900">
+                {unread} document(s) have not been read yet
+              </p>
+              <p className="text-xs text-amber-800">
+                They still show the upload date and the category picked at
+                upload. Re-read them to take category, date, vendor and amount
+                from the document itself.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleReread}
+              disabled={rereading}
+              className="flex items-center gap-2 rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-60"
+            >
+              {rereading ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <RotateCcw className="h-4 w-4" aria-hidden="true" />
+              )}
+              {rereading ? `Re-reading… ${unread} left` : `Re-read ${unread}`}
+            </button>
+          </section>
+        )}
 
         {/* Stat cards */}
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -31,7 +31,8 @@ export function AuthForm({
   const [businessName, setBusinessName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [aiConsent, setAiConsent] = useState(false);
+const [busy, setBusy] = useState(false);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -44,7 +45,7 @@ export function AuthForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           isSignUp
-            ? { email, password, fullName, businessName }
+            ? { email, password, fullName, businessName, aiConsent }
             : { email, password },
         ),
       });
@@ -180,6 +181,22 @@ export function AuthForm({
                 placeholder="At least 8 characters"
               />
             </div>
+
+            {isSignUp && (
+              <label className="flex items-start gap-2 text-xs text-slate-600">
+                <input
+                  type="checkbox"
+                  required
+                  checked={aiConsent}
+                  onChange={(e) => setAiConsent(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                />
+                <span>
+                  I consent to BusinessVault sending my document text to an AI
+                  provider for classification and extraction. (Required)
+                </span>
+              </label>
+            )}
 
             {error && (
               <p

@@ -13,21 +13,23 @@ import {
   mkdirSync,
   readFileSync,
   rmSync,
-  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
 
+import { AUTO_ACCEPT_CONFIDENCE } from "../config";
 import type { Category } from "../config";
 import { todayUtcDate } from "../dates";
 import { buildStoragePath, extensionOf } from "../filenames";
 import type { BusinessInfo, DocumentRecord, SessionUser } from "../types";
 import type {
   CreateResult,
+  DocumentPatch,
   DocumentStore,
   NewDocumentInput,
   StoredBytes,
+  StoredClassification,
 } from "./types";
 
 interface StoreShape {
@@ -138,7 +140,7 @@ export class LocalDevDocumentStore implements DocumentStore {
     const state = this.load();
     const business = this.businessOf(state, userId);
     if (!business) return [];
-    return state.documents.filter((d) => d.businessId === business.id);
+    return state.documents.filter((d) => d.businessId === business.id && !d.deletedAt);
   }
 
   async createDocuments(
@@ -194,6 +196,13 @@ export class LocalDevDocumentStore implements DocumentStore {
           category: input.category as Category,
           createdAt: now,
           updatedAt: now,
+          sourceType: input.sourceType ?? "upload",
+          sourceAccount: input.sourceAccount ?? null,
+          sourceFileId: input.sourceFileId ?? null,
+          importedAt: now,
+          processingStatus: "pending",
+          verificationStatus: "unverified",
+          deletedAt: null,
         };
         state.documents.push(record);
         created.push(record);
@@ -214,7 +223,7 @@ export class LocalDevDocumentStore implements DocumentStore {
     const business = this.businessOf(state, userId);
     if (!business) return null;
     const doc = state.documents.find((d) => d.id === docId);
-    if (!doc || doc.businessId !== business.id) return null;
+    if (!doc || doc.businessId !== business.id || doc.deletedAt) return null;
     return doc;
   }
 
@@ -223,19 +232,11 @@ export class LocalDevDocumentStore implements DocumentStore {
     if (!doc) return false;
 
     const state = this.load();
-    const before = state.documents.length;
-    state.documents = state.documents.filter((d) => d.id !== docId);
-    if (state.documents.length === before) return false;
+    const target = state.documents.find((d) => d.id === docId);
+    if (!target) return false;
+    target.deletedAt = this.now();
+    target.updatedAt = this.now();
     this.save(state);
-
-    // Best-effort storage cleanup; a failure can only leave an unreferenced
-    // orphan file — never a listed document pointing at a missing object.
-    try {
-      const absPath = join(this.filesDir, doc.storagePath);
-      if (existsSync(absPath)) unlinkSync(absPath);
-    } catch {
-      /* orphan file acceptable */
-    }
     return true;
   }
 
@@ -257,8 +258,75 @@ export class LocalDevDocumentStore implements DocumentStore {
     return `/api/documents/${record.id}/download?inline=1`;
   }
 
+  async listForReview(userId: string): Promise<DocumentRecord[]> {
+    const docs = await this.listDocuments(userId);
+    return docs.filter(
+      (doc) =>
+        doc.classifiedBy !== "human" &&
+        ((doc.confidence ?? 1) < AUTO_ACCEPT_CONFIDENCE || doc.category === "Other"),
+    );
+  }
+
+  async updateDocument(
+    userId: string,
+    docId: string,
+    patch: DocumentPatch,
+  ): Promise<DocumentRecord | null> {
+    const doc = await this.getDocument(userId, docId);
+    if (!doc) return null;
+
+    const state = this.load();
+    const target = state.documents.find((entry) => entry.id === docId);
+    if (!target) return null;
+
+    target.category = patch.category;
+    target.documentDate = patch.documentDate;
+    target.amount = patch.amount;
+    target.confidence = 1;
+    target.classifiedBy = "human";
+    target.updatedAt = this.now();
+    this.save(state);
+    return target;
+  }
+
+  async listUnreadDocuments(userId: string, limit: number): Promise<DocumentRecord[]> {
+    const docs = await this.listDocuments(userId);
+    return docs
+      .filter((doc) => !doc.classifiedBy)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+      .slice(0, limit);
+  }
+
+  async countUnreadDocuments(userId: string): Promise<number> {
+    const docs = await this.listDocuments(userId);
+    return docs.filter((doc) => !doc.classifiedBy).length;
+  }
+
+  async applyClassification(
+    userId: string,
+    docId: string,
+    input: StoredClassification,
+  ): Promise<DocumentRecord | null> {
+    const doc = await this.getDocument(userId, docId);
+    if (!doc) return null;
+
+    const state = this.load();
+    const target = state.documents.find((entry) => entry.id === docId);
+    if (!target) return null;
+
+    target.category = input.category;
+    target.documentDate = input.documentDate;
+    target.amount = input.amount;
+    target.vendor = input.vendor;
+    target.gstin = input.gstin;
+    target.confidence = input.confidence;
+    target.classifiedBy = input.model;
+    target.updatedAt = this.now();
+    this.save(state);
+    return target;
+  }
+
   /** Test helper: remove the whole dev data directory. */
   reset(): void {
     rmSync(this.dataDir, { recursive: true, force: true });
-  }
-}
+  }}

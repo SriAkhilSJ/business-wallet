@@ -31,7 +31,7 @@ Index: `idx_businesses_owner` on `owner_id`.
 | uploaded_by | uuid | NOT NULL, FK → `auth.users(id)` ON DELETE CASCADE |
 | original_filename | text | NOT NULL, length 1–255 |
 | storage_path | text | NOT NULL, UNIQUE |
-| mime_type | text | NOT NULL IN (application/pdf, image/jpeg, image/png) |
+| mime_type | text | NOT NULL IN (application/pdf, image/jpeg, image/png, text/plain) |
 | file_size | bigint | NOT NULL, > 0 AND ≤ 10485760 (10 MB) |
 | document_date | date | NULL — calendar date; NULL means "use upload date" |
 | category | text | NOT NULL IN (Sales Invoice, Purchase Invoice, Expense, Receipt, Utility Bill, Payment Proof, Other) |
@@ -52,8 +52,9 @@ businesses 1 ── * documents           (business_id, ON DELETE CASCADE)
 ```
 
 Referential integrity is enforced with foreign keys. Application code uses
-`COALESCE(document_date, (created_at AT TIME ZONE 'utc')::date)` as the
-effective date for month grouping (mirrored by `src/lib/filters.ts`).
+The effective date of a document is `document_date` when present. Documents without a read
+date are not attributed to the upload month; they are excluded from month-scoped exports and
+listed separately in the coverage report, so nothing is silently dated to the upload day.
 
 ## 3. Row Level Security
 
@@ -100,6 +101,9 @@ via short-lived signed URLs or authorized server-side streaming.
 | --- | --- |
 | `supabase/migrations/20261114000001_init_schema.sql` | Tables, constraints, indexes, triggers, RLS policies |
 | `supabase/migrations/20261114000002_storage_bucket.sql` | Private bucket + storage RLS policies |
+| `supabase/migrations/20261115000001_classification.sql` | Classification fields (amount, vendor, gstin, confidence, classified_by) |
+| `supabase/migrations/20261116000001_text_documents.sql` | Allow text/plain documents |
+| `supabase/migrations/20261117000001_content_hash.sql` | Content hash column + lookup index for duplicate detection |
 
 Apply via the Supabase CLI (`supabase db push`) or by pasting into the
 Supabase SQL editor — see README "Supabase setup".

@@ -11,10 +11,9 @@ import { z } from "zod";
 
 import { assertDevFallback, requireUser } from "@/lib/auth/session";
 import { CATEGORIES } from "@/lib/config";
-import { validateUploadFile } from "@/lib/file-validation";
 import { badRequest, jsonError } from "@/lib/errors";
 import { getStore } from "@/lib/store";
-import type { NewDocumentInput } from "@/lib/store/types";
+import { ingest } from "@/lib/ingest";
 
 const manifestEntrySchema = z.object({
   file: z.string().min(1),
@@ -46,9 +45,10 @@ export async function POST() {
       (await store.listDocuments(user.id)).map((d) => d.originalFilename),
     );
 
-    const inputs: NewDocumentInput[] = [];
     const skipped: string[] = [];
     const errors: { filename: string; error: string }[] = [];
+
+    const ingestFiles: { filename: string; bytes: Uint8Array; documentDate: string; category: (typeof CATEGORIES)[number] }[] = [];
 
     for (const entry of manifest) {
       if (existing.has(entry.file)) {
@@ -65,26 +65,15 @@ export async function POST() {
         });
         continue;
       }
-      const check = validateUploadFile({
+      ingestFiles.push({
         filename: entry.file,
-        size: bytes.length,
         bytes,
-      });
-      if (!check.ok) {
-        errors.push({ filename: entry.file, error: check.error });
-        continue;
-      }
-      inputs.push({
-        originalFilename: entry.file,
-        bytes,
-        mimeType: check.mimeType,
-        fileSize: bytes.length,
         documentDate: entry.documentDate,
         category: entry.category,
       });
     }
 
-    const result = await store.createDocuments(user.id, inputs);
+    const result = await ingest(store, user.id, ingestFiles);
     return Response.json(
       {
         documents: result.created,

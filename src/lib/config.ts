@@ -20,12 +20,18 @@ export const MAX_FILE_SIZE_MB = 10;
 export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 export const MAX_FILES_PER_UPLOAD = 20;
 
-export const ALLOWED_EXTENSIONS = ["pdf", "jpg", "jpeg", "png"] as const;
+export const ALLOWED_EXTENSIONS = ["pdf", "jpg", "jpeg", "png", "txt"] as const;
 
 export const STORAGE_BUCKET = "business-documents";
 
 /** Lifetime of signed storage URLs issued for previews. */
 export const SIGNED_URL_TTL_SECONDS = 15 * 60;
+
+/**
+ * Above this, the model's guess is used instead of asking the owner.
+ * Below it, the document goes to review.
+ */
+export const AUTO_ACCEPT_CONFIDENCE = 0.85;
 
 /** Search input limit (characters). */
 export const MAX_SEARCH_LENGTH = 200;

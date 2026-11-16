@@ -109,6 +109,7 @@ known risks.
 | `/api/documents/[id]/preview` | GET | Short-lived authorized preview URL |
 | `/api/documents/[id]/download` | GET | Authorized byte stream |
 | `/api/export` | POST | Monthly ZIP (`{month, year}`) |
+| `/api/collect` | POST | Collect a date range against an optional note; `{download:true}` returns the pack |
 | `/api/dev/load-samples` | POST | Load sample PDFs — dev-fallback only |
 
 ## Project Structure

@@ -25,7 +25,7 @@ and what remains open.
 - Private storage bucket only; **no permanent public URLs**. Preview/download
   use short-lived signed URLs (Supabase mode) or authorized streaming.
 - Server-side validation on every upload: extension allow-list
-  (pdf/jpg/jpeg/png), MIME allow-list, **magic-byte sniffing** (content must
+  (pdf/jpg/jpeg/png/txt), MIME allow-list, **magic-byte sniffing** (content must
   match the claimed type), max 10 MB per file, max 20 files per request,
   non-empty files, validated metadata (Zod).
 - Filenames are sanitized for storage/ZIP: path traversal (`../`), control

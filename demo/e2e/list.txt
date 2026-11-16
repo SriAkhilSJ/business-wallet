@@ -1,0 +1,15 @@
+file 'C:/Users/Administrator/Downloads/business-wallet/business-wallet/demo/e2e/frames/01-title.png'
+duration 3.5
+file 'C:/Users/Administrator/Downloads/business-wallet/business-wallet/demo/e2e/frames/02-problem.png'
+duration 3.5
+file 'C:/Users/Administrator/Downloads/business-wallet/business-wallet/demo/e2e/frames/03-read.png'
+duration 3.5
+file 'C:/Users/Administrator/Downloads/business-wallet/business-wallet/demo/e2e/frames/04-review.png'
+duration 3.5
+file 'C:/Users/Administrator/Downloads/business-wallet/business-wallet/demo/e2e/frames/05-tests.png'
+duration 3.5
+file 'C:/Users/Administrator/Downloads/business-wallet/business-wallet/demo/e2e/frames/06-pack.png'
+duration 3.5
+file 'C:/Users/Administrator/Downloads/business-wallet/business-wallet/demo/e2e/frames/07-end.png'
+duration 3.5
+file 'C:/Users/Administrator/Downloads/business-wallet/business-wallet/demo/e2e/frames/07-end.png'

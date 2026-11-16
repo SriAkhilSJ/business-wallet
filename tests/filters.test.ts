@@ -59,7 +59,7 @@ const DOCS: DocumentRecord[] = [
 describe("sortDocuments", () => {
   it("orders by effective date descending", () => {
     const sorted = sortDocuments(DOCS);
-    expect(sorted.map((d) => d.id)).toEqual(["3", "2", "1", "4"]);
+    expect(sorted.map((d) => d.id)).toEqual(["2", "1", "4", "3"]);
   });
 });
 
@@ -69,16 +69,20 @@ describe("filterDocuments", () => {
     expect(nov2026.map((d) => d.id).sort()).toEqual(["2", "3"]);
 
     const oct2026 = filterDocuments(DOCS, { month: 10, year: 2026 });
-    expect(oct2026.map((d) => d.id)).toEqual(["1"]);
+    expect(oct2026.map((d) => d.id)).toEqual(["1", "3"]);
 
     const nov2025 = filterDocuments(DOCS, { month: 11, year: 2025 });
-    expect(nov2025.map((d) => d.id)).toEqual(["4"]);
+    expect(nov2025.map((d) => d.id)).toEqual(["4", "3"]);
   });
 
-  it("uses the upload date as fallback (doc 3 has no document date)", () => {
-    // doc 3 created 2026-11-12 UTC but has no document date → November.
+  it("keeps an undated document visible instead of assigning it a month", () => {
+    // doc 3 has no document date: it must not be claimed as November, and it
+    // must not disappear when a month filter is applied either.
     const nov = filterDocuments(DOCS, { month: 11, year: 2026 });
+    const oct = filterDocuments(DOCS, { month: 10, year: 2026 });
     expect(nov.some((d) => d.id === "3")).toBe(true);
+    expect(oct.some((d) => d.id === "3")).toBe(true);
+    expect(documentsForMonth(DOCS, 11, 2026).some((d) => d.id === "3")).toBe(false);
   });
 
   it("filters by category and search", () => {
@@ -107,7 +111,7 @@ describe("filterDocuments", () => {
 describe("documentsForMonth", () => {
   it("returns exactly the selected month regardless of category", () => {
     const result = documentsForMonth(DOCS, 11, 2026);
-    expect(result.map((d) => d.id).sort()).toEqual(["2", "3"]);
+    expect(result.map((d) => d.id).sort()).toEqual(["2"]);
   });
 
   it("returns empty for months without documents", () => {
@@ -120,10 +124,11 @@ describe("summarizeDocuments", () => {
     const summary = summarizeDocuments(DOCS, "2026-11-14");
     expect(summary.total).toBe(4);
     // Current month (Nov 2026): docs 2, 3 → doc 4's effective date is 2025-11.
-    expect(summary.currentMonthCount).toBe(2);
+    // Doc 3 has no document date, so it is not counted in any month.
+    expect(summary.currentMonthCount).toBe(1);
     expect(summary.byCategory["Utility Bill"]).toBe(1);
     expect(summary.byCategory["Other"]).toBe(0);
-    expect(summary.recent.map((d) => d.id)).toEqual(["3", "2", "1", "4"]);
+    expect(summary.recent.map((d) => d.id)).toEqual(["2", "1", "4", "3"]);
     expect(summary.recent.length).toBe(5 > DOCS.length ? DOCS.length : 5);
   });
 
